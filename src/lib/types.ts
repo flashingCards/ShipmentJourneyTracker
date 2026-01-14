@@ -1,0 +1,22 @@
+import type { LucideIcon } from "lucide-react";
+
+export type JourneyMode = 10 | 12 | 15;
+
+export type TimelineEvent = {
+  id: string;
+  stage: string;
+  status: 'completed' | 'in-progress' | 'pending';
+  plannedDate: string;
+  actualDate?: string;
+  comments: string;
+  Icon: LucideIcon;
+};
+
+export type Shipment = {
+  id: string;
+  scancode: string;
+  company: string;
+  serviceType: string;
+  status: 'On-Time' | 'Delayed' | 'Delivered';
+  timeline: TimelineEvent[];
+};
