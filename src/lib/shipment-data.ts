@@ -1,3 +1,4 @@
+
 import {
   Package,
   Warehouse,
@@ -24,9 +25,13 @@ const iconMap: { [key: string]: LucideIcon } = {
 
 function parseCSV(csv: string): any[] {
   const lines = csv.split(/[\r\n]+/).filter(line => line.trim() !== '');
+  if (lines.length < 3) return [];
+
   const result = [];
-  const headers = lines[0].split(',').map(h => h.trim().replace(/\s+/g, '_'));
-  for (let i = 1; i < lines.length; i++) {
+  // Headers are on the 2nd line (index 1), data starts from 3rd line (index 2)
+  const headers = lines[1].split(',').map(h => h.trim().replace(/\s+/g, '_'));
+  
+  for (let i = 2; i < lines.length; i++) {
     const obj: any = {};
     const currentline = lines[i].split(',');
     for (let j = 0; j < headers.length; j++) {
@@ -54,8 +59,34 @@ function getStatus(actualDateStr?: string, plannedDateStr?: string): TimelineEve
 }
 
 function isValidDateString(dateString?: string): boolean {
-    return !!dateString && dateString.trim() !== '' && !isNaN(new Date(dateString).getTime());
+    if (!dateString || dateString.trim() === '') return false;
+    // The format seems to be "DD-Mon-YYYY" which is not directly parsed by new Date() in all environments.
+    // Let's try to reformat it to "Mon DD, YYYY"
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return !isNaN(new Date(dateString).getTime());
+    const [day, month, year] = parts;
+    const standardDate = `${month} ${day}, ${year}`;
+    return !isNaN(new Date(standardDate).getTime());
 }
+
+function parseDate(dateString?: string): Date | null {
+    if (!dateString || dateString.trim() === '') return null;
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      // Handle month abbreviation to number
+      const monthIndex = new Date(Date.parse(month +" 1, 2012")).getMonth();
+      if (!isNaN(parseInt(year)) && !isNaN(monthIndex) && !isNaN(parseInt(day))) {
+          return new Date(parseInt(year), monthIndex, parseInt(day));
+      }
+    }
+    const d = new Date(dateString);
+    if (!isNaN(d.getTime())) {
+        return d;
+    }
+    return null;
+}
+
 
 export async function fetchAndParseShipments(): Promise<Shipment[]> {
   const response = await fetch(SHEET_URL, { cache: "no-store" });
@@ -79,11 +110,14 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
     let overallDelayed = false;
 
     stages.forEach((stage, stageIndex) => {
-        if (isValidDateString(stage.guidance) || isValidDateString(stage.actual)) {
-            const plannedDate = isValidDateString(stage.guidance) ? new Date(stage.guidance!).toISOString() : new Date().toISOString();
-            const actualDate = isValidDateString(stage.actual) ? new Date(stage.actual!).toISOString() : undefined;
+        const plannedDateObj = parseDate(stage.guidance);
+        const actualDateObj = parseDate(stage.actual);
+
+        if (plannedDateObj || actualDateObj) {
+            const plannedDate = plannedDateObj ? plannedDateObj.toISOString() : new Date().toISOString();
+            const actualDate = actualDateObj ? actualDateObj.toISOString() : undefined;
             
-            if (actualDate && new Date(actualDate) > new Date(plannedDate)) {
+            if (actualDate && plannedDateObj && new Date(actualDate) > new Date(plannedDate)) {
                 overallDelayed = true;
             }
 
@@ -120,7 +154,7 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
       status: shipmentStatus,
       timeline: timeline,
     };
-  }).filter(shipment => shipment.timeline.length > 0);
+  }).filter(shipment => shipment.timeline.length > 0 && shipment.scancode);
 
   return shipments;
 }
