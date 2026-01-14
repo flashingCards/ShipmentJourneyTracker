@@ -13,10 +13,12 @@ export type TimelineEvent = {
 };
 
 export type Shipment = {
-  id: string;
+  id: string; // Using scancode as ID
   scancode: string;
   company: string;
   serviceType: string;
-  status: 'On-Time' | 'Delayed' | 'Delivered';
+  status: 'On-Time' | 'Delayed' | 'Delivered' | 'Exception';
   timeline: TimelineEvent[];
+  country?: string;
+  exception?: string;
 };
