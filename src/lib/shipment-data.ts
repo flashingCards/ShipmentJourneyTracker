@@ -1,149 +1,77 @@
-import { addDays, subDays } from "date-fns";
+
 import {
   Package,
   Warehouse,
   Truck,
   PackageCheck,
+  type LucideIcon,
 } from "lucide-react";
+import type { Shipment, TimelineEvent } from "@/lib/types";
 
-import type { Shipment } from "@/lib/types";
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT55R-BoWFUg1rUYEbhwj0fhX5Nr1a25r3oo1GmKrUFvbvHqRCaqfgDKAPJsT1sV43LfCDQAlLfjdPj/pub?output=csv';
 
-const now = new Date();
+const iconMap: { [key: string]: LucideIcon } = {
+  Package,
+  Warehouse,
+  Truck,
+  PackageCheck,
+};
 
-export const initialShipments: Shipment[] = [
-  {
-    id: "shipment-001",
-    scancode: "SHP736482A",
-    company: "Global Logistics",
-    serviceType: "Express Air",
-    status: "Delayed",
-    timeline: [
-      {
-        id: "event-1-1",
-        stage: "Booked",
-        status: "completed",
-        plannedDate: subDays(now, 8).toISOString(),
-        actualDate: subDays(now, 8).toISOString(),
-        comments: "",
-        Icon: Package,
-      },
-      {
-        id: "event-1-2",
-        stage: "Pickup",
-        status: "completed",
-        plannedDate: subDays(now, 6).toISOString(),
-        actualDate: subDays(now, 5).toISOString(),
-        comments: "Carrier vehicle arrived late due to traffic congestion in the city center.",
-        Icon: Warehouse,
-      },
-      {
-        id: "event-1-3",
-        stage: "In Transit",
-        status: "in-progress",
-        plannedDate: subDays(now, 2).toISOString(),
-        actualDate: undefined,
-        comments: "",
-        Icon: Truck,
-      },
-      {
-        id: "event-1-4",
-        stage: "Delivered",
-        status: "pending",
-        plannedDate: addDays(now, 2).toISOString(),
-        actualDate: undefined,
-        comments: "",
-        Icon: PackageCheck,
-      },
-    ],
-  },
-  {
-    id: "shipment-002",
-    scancode: "SHP298371B",
-    company: "Speedy Shippers",
-    serviceType: "Standard Ground",
-    status: "On-Time",
-    timeline: [
-      {
-        id: "event-2-1",
-        stage: "Booked",
-        status: "completed",
-        plannedDate: subDays(now, 5).toISOString(),
-        actualDate: subDays(now, 5).toISOString(),
-        comments: "",
-        Icon: Package,
-      },
-      {
-        id: "event-2-2",
-        stage: "Pickup",
-        status: "completed",
-        plannedDate: subDays(now, 4).toISOString(),
-        actualDate: subDays(now, 4).toISOString(),
-        comments: "",
-        Icon: Warehouse,
-      },
-      {
-        id: "event-2-3",
-        stage: "In Transit",
-        status: "in-progress",
-        plannedDate: subDays(now, 1).toISOString(),
-        actualDate: undefined,
-        comments: "",
-        Icon: Truck,
-      },
-      {
-        id: "event-2-4",
-        stage: "Delivered",
-        status: "pending",
-        plannedDate: addDays(now, 5).toISOString(),
-        actualDate: undefined,
-        comments: "",
-        Icon: PackageCheck,
-      },
-    ],
-  },
-  {
-    id: "shipment-003",
-    scancode: "SHP555123C",
-    company: "Quick Couriers",
-    serviceType: "Next-Day",
-    status: "Delivered",
-    timeline: [
-      {
-        id: "event-3-1",
-        stage: "Booked",
-        status: "completed",
-        plannedDate: subDays(now, 2).toISOString(),
-        actualDate: subDays(now, 2).toISOString(),
-        comments: "",
-        Icon: Package,
-      },
-      {
-        id: "event-3-2",
-        stage: "Pickup",
-        status: "completed",
-        plannedDate: subDays(now, 2).toISOString(),
-        actualDate: subDays(now, 2).toISOString(),
-        comments: "",
-        Icon: Warehouse,
-      },
-      {
-        id: "event-3-3",
-        stage: "In Transit",
-        status: "completed",
-        plannedDate: subDays(now, 1).toISOString(),
-        actualDate: subDays(now, 1).toISOString(),
-        comments: "",
-        Icon: Truck,
-      },
-      {
-        id: "event-3-4",
-        stage: "Delivered",
-        status: "completed",
-        plannedDate: now.toISOString(),
-        actualDate: subDays(now, 0).toISOString(),
-        comments: "Recipient signed for the package.",
-        Icon: PackageCheck,
-      },
-    ],
-  },
-];
+function parseCSV(csv: string): any[] {
+  const lines = csv.split('\n');
+  const result = [];
+  const headers = lines[0].split(',').map(h => h.trim());
+  for (let i = 1; i < lines.length; i++) {
+    const obj: any = {};
+    const currentline = lines[i].split(',');
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = currentline[j]?.trim();
+    }
+    result.push(obj);
+  }
+  return result;
+}
+
+
+export async function fetchAndParseShipments(): Promise<Shipment[]> {
+  const response = await fetch(SHEET_URL);
+  const csvText = await response.text();
+  const flatData = parseCSV(csvText);
+
+  const shipmentsMap: { [key: string]: Shipment } = {};
+
+  for (const row of flatData) {
+    if (!row.id) continue;
+
+    if (!shipmentsMap[row.id]) {
+      shipmentsMap[row.id] = {
+        id: row.id,
+        scancode: row.scancode,
+        company: row.company,
+        serviceType: row.serviceType,
+        status: row.status as Shipment['status'],
+        timeline: [],
+      };
+    }
+
+    const timelineEvent: TimelineEvent = {
+      id: row.timeline_id,
+      stage: row.timeline_stage,
+      status: row.timeline_status as TimelineEvent['status'],
+      plannedDate: row.timeline_plannedDate,
+      actualDate: row.timeline_actualDate || undefined,
+      comments: row.timeline_comments || "",
+      Icon: iconMap[row.timeline_Icon] || Package,
+    };
+    
+    shipmentsMap[row.id].timeline.push(timelineEvent);
+  }
+  
+  Object.values(shipmentsMap).forEach(shipment => {
+      shipment.timeline.sort((a,b) => new Date(a.plannedDate).getTime() - new Date(b.plannedDate).getTime());
+  });
+
+  return Object.values(shipmentsMap);
+}
+
+    
