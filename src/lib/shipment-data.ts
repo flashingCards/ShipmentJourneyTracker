@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import type { Shipment, TimelineEvent } from "@/lib/types";
 
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT55R-BoWFUg1rUYEbhwj0fhX5Nr1a25r3oo1GmKrUFvbvHqRCaqfgDKAPJsT1sV43LfCDQAlLfjdPj/pub?output=csv';
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT55R-BoWFUg1rUYEbhwj0fhX5Nr1a25r3oo1GmKrUFvbvHqRCaqfgDKAPJsT1sV43LfCDQAlLfjdPj/pub?gid=0&single=true&output=csv';
 
 const iconMap: { [key: string]: LucideIcon } = {
   "Origin": Landmark,
