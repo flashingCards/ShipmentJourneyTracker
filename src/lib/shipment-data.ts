@@ -126,8 +126,6 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
         }
     });
 
-    timeline.sort((a,b) => new Date(a.plannedDate).getTime() - new Date(b.plannedDate).getTime());
-
     let shipmentStatus: Shipment['status'] = 'On-Time';
     const exceptionText = row.Exception || '';
     if(exceptionText && exceptionText.toLowerCase() !== 'false' && exceptionText.trim() !== '') {
