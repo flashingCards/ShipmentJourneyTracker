@@ -145,9 +145,8 @@ export default function ShipmentTrackerPage() {
         </p>
       </header>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="md:col-span-2" />
-        <Card>
+      <div className="flex justify-center mb-8">
+        <Card className="w-full max-w-sm">
            <CardHeader>
              <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
