@@ -24,22 +24,22 @@ const iconMap: { [key: string]: LucideIcon } = {
 };
 
 function parseCSV(csv: string): any[] {
-  const lines = csv.split(/[\r\n]+/).filter(line => line.trim() !== '');
-  if (lines.length < 3) return [];
-
-  const result = [];
-  // Headers are on the 2nd line (index 1), data starts from 3rd line (index 2)
-  const headers = lines[1].split(',').map(h => h.trim().replace(/\s+/g, '_'));
+    const lines = csv.split(/[\r\n]+/).filter(line => line.trim() !== '');
+    if (lines.length < 3) return [];
   
-  for (let i = 2; i < lines.length; i++) {
-    const obj: any = {};
-    const currentline = lines[i].split(',');
-    for (let j = 0; j < headers.length; j++) {
-      obj[headers[j]] = currentline[j]?.trim();
-    }
-    result.push(obj);
-  }
-  return result;
+    const headers = lines[1].split(',').map(h => h.trim().replace(/\s+/g, '_').replace(/[\(\)]/g, ''));
+    const dataLines = lines.slice(2);
+  
+    const result = dataLines.map(line => {
+      const values = line.split(',');
+      const obj: any = {};
+      headers.forEach((header, index) => {
+        obj[header] = values[index]?.trim() || '';
+      });
+      return obj;
+    });
+  
+    return result;
 }
 
 function getStatus(actualDateStr?: string, plannedDateStr?: string): TimelineEvent['status'] {
@@ -58,26 +58,16 @@ function getStatus(actualDateStr?: string, plannedDateStr?: string): TimelineEve
     return 'pending';
 }
 
-function isValidDateString(dateString?: string): boolean {
-    if (!dateString || dateString.trim() === '') return false;
-    // The format seems to be "DD-Mon-YYYY" which is not directly parsed by new Date() in all environments.
-    // Let's try to reformat it to "Mon DD, YYYY"
-    const parts = dateString.split('-');
-    if (parts.length !== 3) return !isNaN(new Date(dateString).getTime());
-    const [day, month, year] = parts;
-    const standardDate = `${month} ${day}, ${year}`;
-    return !isNaN(new Date(standardDate).getTime());
-}
-
 function parseDate(dateString?: string): Date | null {
-    if (!dateString || dateString.trim() === '') return null;
+    if (!dateString || dateString.trim() === '' || dateString.toLowerCase() === 'na') return null;
     const parts = dateString.split('-');
     if (parts.length === 3) {
       const [day, month, year] = parts;
-      // Handle month abbreviation to number
       const monthIndex = new Date(Date.parse(month +" 1, 2012")).getMonth();
       if (!isNaN(parseInt(year)) && !isNaN(monthIndex) && !isNaN(parseInt(day))) {
-          return new Date(parseInt(year), monthIndex, parseInt(day));
+          // Years like '24' should be '2024'
+          const fullYear = parseInt(year) < 100 ? 2000 + parseInt(year) : parseInt(year);
+          return new Date(fullYear, monthIndex, parseInt(day));
       }
     }
     const d = new Date(dateString);
@@ -90,6 +80,9 @@ function parseDate(dateString?: string): Date | null {
 
 export async function fetchAndParseShipments(): Promise<Shipment[]> {
   const response = await fetch(SHEET_URL, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch sheet: ${response.statusText}`);
+  }
   const csvText = await response.text();
   const flatData = parseCSV(csvText);
 
@@ -102,7 +95,7 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
       { name: "Origin", guidance: row.Guidance_At_origin, actual: row.Actal_At_origin, remarks: row.Remarks },
       { name: "Flight-out", guidance: row.Guidance_Flightout, actual: row.Actual_Flyout, remarks: row.Remarks_1 },
       { name: "Landed", guidance: row.Guidance_Landed, actual: row.Actual_Landed, remarks: row.Remarks_2 },
-      { name: "Cleared at DC", guidance: row.Guidance_Cleared_at_DC, actual: row.Actual_Cleared_at_DC, remarks: row['Remarks_and_logs'] },
+      { name: "Cleared at DC", guidance: row.Guidance_Cleared_at_DC, actual: row.Actual_Cleared_at_DC, remarks: row.Remarks_and_logs },
       { name: "Injection", guidance: row.Guidance_Injection, actual: row.Actual_injection, remarks: row.Remarks_3 },
       { name: "Delivery", guidance: row.Guidance_Delivery, actual: row.Actual_Delivery, remarks: row.Remarks_4 },
     ];
@@ -113,11 +106,11 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
         const plannedDateObj = parseDate(stage.guidance);
         const actualDateObj = parseDate(stage.actual);
 
-        if (plannedDateObj || actualDateObj) {
-            const plannedDate = plannedDateObj ? plannedDateObj.toISOString() : new Date().toISOString();
+        if (plannedDateObj) { // An event must have at least a planned date
+            const plannedDate = plannedDateObj.toISOString();
             const actualDate = actualDateObj ? actualDateObj.toISOString() : undefined;
             
-            if (actualDate && plannedDateObj && new Date(actualDate) > new Date(plannedDate)) {
+            if (actualDate && new Date(actualDate) > new Date(plannedDate)) {
                 overallDelayed = true;
             }
 
@@ -136,9 +129,10 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
     timeline.sort((a,b) => new Date(a.plannedDate).getTime() - new Date(b.plannedDate).getTime());
 
     let shipmentStatus: Shipment['status'] = 'On-Time';
-    if(row.Exception && row.Exception.toLowerCase() !== 'false' && row.Exception.trim() !== '') {
+    const exceptionText = row.Exception || '';
+    if(exceptionText && exceptionText.toLowerCase() !== 'false' && exceptionText.trim() !== '') {
         shipmentStatus = 'Exception';
-    } else if (timeline.every(e => e.status === 'completed')) {
+    } else if (timeline.length > 0 && timeline[timeline.length - 1].status === 'completed') {
         shipmentStatus = 'Delivered';
     } else if (overallDelayed) {
         shipmentStatus = 'Delayed';
@@ -150,7 +144,7 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
       company: row.company || 'N/A',
       serviceType: row.Service_type || 'N/A',
       country: row.Country,
-      exception: row.Exception,
+      exception: exceptionText,
       status: shipmentStatus,
       timeline: timeline,
     };

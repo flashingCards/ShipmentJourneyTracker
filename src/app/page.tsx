@@ -4,19 +4,14 @@
 import * as React from "react";
 import { addDays, differenceInDays, parseISO } from "date-fns";
 import {
-  Link as LinkIcon,
   Package,
   Radio,
-  Settings,
   RefreshCw,
   Loader2,
 } from "lucide-react";
 
 import { fetchAndParseShipments } from "@/lib/shipment-data";
-import type { JourneyMode, Shipment } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import { Accordion } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
+import type { Shipment } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -24,18 +19,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import ShipmentCard from "@/components/shipment-card";
-import { Toaster } from "@/components/ui/toaster";
+import { Accordion } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { useAppContext } from "@/context/app-provider";
 
 export default function ShipmentTrackerPage() {
+  const { journeyConfig, setJourneyConfig, activeJourneyMode } = useAppContext();
   const [shipments, setShipments] = React.useState<Shipment[]>([]);
-  const [journeyMode, setJourneyMode] = React.useState<JourneyMode>(10);
   const [loading, setLoading] = React.useState(true);
   const { toast } = useToast();
 
@@ -89,36 +81,36 @@ export default function ShipmentTrackerPage() {
 
     setShipments(prevShipments => {
       return prevShipments.map(shipment => {
-        let lastKnownDate = parseISO(shipment.timeline[0].plannedDate);
-        let lastKnownDateIsActual = false;
+        let lastKnownDate: Date | null = null;
+        let lastStageIndex = -1;
 
-        let firstPendingIndex = -1;
-
-        for (let i = 0; i < shipment.timeline.length; i++) {
-          const event = shipment.timeline[i];
-          if (event.status === 'completed' && event.actualDate) {
-            lastKnownDate = parseISO(event.actualDate);
-            lastKnownDateIsActual = true;
-          } else {
-            if (firstPendingIndex === -1) {
-              firstPendingIndex = i;
+        // Find the last completed event to use as the anchor for recalculation
+        for(let i = shipment.timeline.length - 1; i >= 0; i--) {
+            const event = shipment.timeline[i];
+            if(event.status === 'completed' && event.actualDate) {
+                lastKnownDate = parseISO(event.actualDate);
+                lastStageIndex = i;
+                break;
             }
-          }
         }
-        
-        if (firstPendingIndex === -1) return shipment;
 
-        const remainingStages = shipment.timeline.length - firstPendingIndex;
-        if(remainingStages <= 0) return shipment;
-        
-        const daysPerStage = journeyMode / shipment.timeline.length;
-        
-        let currentDate = lastKnownDateIsActual ? lastKnownDate : parseISO(shipment.timeline[firstPendingIndex].plannedDate);
-        
+        // If no event is completed, start from the first event's planned date
+        if(!lastKnownDate) {
+            lastKnownDate = parseISO(shipment.timeline[0].plannedDate);
+            lastStageIndex = -1;
+        }
+
+        const currentConfig = journeyConfig[activeJourneyMode];
+
         const newTimeline = [...shipment.timeline];
-
-        for (let i = firstPendingIndex; i < newTimeline.length; i++) {
-            currentDate = addDays(currentDate, daysPerStage);
+        let currentDate = lastKnownDate;
+        
+        for (let i = lastStageIndex + 1; i < newTimeline.length; i++) {
+            const stageConfig = currentConfig.find(c => c.node === newTimeline[i].stage);
+            const daysToAdd = stageConfig ? stageConfig.days : 1;
+            
+            currentDate = addDays(currentDate, daysToAdd);
+            
             newTimeline[i] = {
                 ...newTimeline[i],
                 plannedDate: currentDate.toISOString(),
@@ -135,10 +127,11 @@ export default function ShipmentTrackerPage() {
         return { ...shipment, timeline: newTimeline, status: newOverallStatus };
       });
     });
-  }, [journeyMode, shipments.length]);
+  }, [activeJourneyMode, journeyConfig, shipments.length]);
+
 
   return (
-    <div className="container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+    <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
       <header className="mb-8 text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary">
           <Radio className="h-5 w-5" />
@@ -152,39 +145,8 @@ export default function ShipmentTrackerPage() {
         </p>
       </header>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Settings className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle>Journey Configuration</CardTitle>
-                <CardDescription>Select a mode to recalculate guidance dates.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              defaultValue={String(journeyMode)}
-              onValueChange={(val) => setJourneyMode(Number(val) as JourneyMode)}
-              className="grid grid-cols-2 sm:grid-cols-3 gap-4"
-            >
-              {[10, 12, 15].map(mode => (
-                <Label key={mode} htmlFor={`mode-${mode}`} className={cn(
-                  "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer",
-                  journeyMode === mode && "border-primary"
-                )}>
-                  <RadioGroupItem value={String(mode)} id={`mode-${mode}`} className="sr-only" />
-                  <span className="text-2xl font-bold">{mode}</span>
-                  <span className="text-sm text-muted-foreground">Days</span>
-                </Label>
-              ))}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="md:col-span-2" />
         <Card>
            <CardHeader>
              <div className="flex items-center gap-3">
@@ -232,9 +194,6 @@ export default function ShipmentTrackerPage() {
             ))
         )}
       </Accordion>
-      <Toaster />
     </div>
   );
 }
-
-    
