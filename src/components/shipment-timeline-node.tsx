@@ -1,43 +1,26 @@
+
 "use client";
 
 import { format, differenceInDays, parseISO } from "date-fns";
-import { MessageSquarePlus, Edit, Save } from "lucide-react";
 import * as React from "react";
 
 import type { TimelineEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 
 type ShipmentTimelineNodeProps = {
   shipmentId: string;
   node: TimelineEvent;
   isLast: boolean;
-  onCommentChange: (
-    shipmentId: string,
-    timelineEventId: string,
-    comment: string
-  ) => void;
 };
 
 export default function ShipmentTimelineNode({
-  shipmentId,
   node,
   isLast,
-  onCommentChange,
 }: ShipmentTimelineNodeProps) {
-  const [isEditingComment, setIsEditingComment] = React.useState(false);
-  const [comment, setComment] = React.useState(node.comments);
-
   const delay =
     node.status === "completed" && node.actualDate
       ? differenceInDays(parseISO(node.actualDate), parseISO(node.plannedDate))
       : 0;
-
-  const handleSaveComment = () => {
-    onCommentChange(shipmentId, node.id, comment);
-    setIsEditingComment(false);
-  };
 
   const nodeStatusStyles = {
     completed: "bg-primary border-primary",
@@ -96,42 +79,10 @@ export default function ShipmentTimelineNode({
             )}
           </div>
           <div className="mt-3 space-y-2">
-            {node.comments && !isEditingComment && (
+            {node.comments && (
               <p className="text-sm text-foreground p-3 bg-muted rounded-md border">
                 {node.comments}
               </p>
-            )}
-            {isEditingComment ? (
-              <div className="space-y-2">
-                <Textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Add your remarks..."
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveComment}>
-                    <Save className="mr-2 h-4 w-4" /> Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsEditingComment(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-                (delay > 0 || node.comments) &&
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditingComment(true)}
-                  className="gap-2"
-                >
-                  {node.comments ? <Edit /> : <MessageSquarePlus />}
-                  {node.comments ? "Edit Comment" : "Add Comment"}
-                </Button>
             )}
           </div>
         </div>

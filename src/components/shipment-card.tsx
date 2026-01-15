@@ -1,3 +1,4 @@
+
 "use client";
 
 import { format, differenceInDays, parseISO } from "date-fns";
@@ -16,11 +17,6 @@ import ShipmentTimelineNode from "@/components/shipment-timeline-node";
 
 type ShipmentCardProps = {
   shipment: Shipment;
-  onCommentChange: (
-    shipmentId: string,
-    timelineEventId: string,
-    comment: string
-  ) => void;
 };
 
 const StatusBadge = ({ status }: { status: Shipment["status"] }) => {
@@ -40,7 +36,6 @@ const StatusBadge = ({ status }: { status: Shipment["status"] }) => {
 
 export default function ShipmentCard({
   shipment,
-  onCommentChange,
 }: ShipmentCardProps) {
   const overallDelay = React.useMemo(() => {
     return shipment.timeline.reduce((acc, event) => {
@@ -111,7 +106,6 @@ export default function ShipmentCard({
               key={event.id}
               shipmentId={shipment.id}
               node={event}
-              onCommentChange={onCommentChange}
               isLast={index === shipment.timeline.length - 1}
             />
           ))}

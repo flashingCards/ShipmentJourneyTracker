@@ -55,26 +55,6 @@ export default function ShipmentTrackerPage() {
   React.useEffect(() => {
     loadShipments();
   }, [loadShipments]);
-
-
-  const handleCommentChange = (
-    shipmentId: string,
-    timelineEventId: string,
-    comment: string
-  ) => {
-    setShipments((prevShipments) =>
-      prevShipments.map((shipment) =>
-        shipment.id === shipmentId
-          ? {
-              ...shipment,
-              timeline: shipment.timeline.map((event) =>
-                event.id === timelineEventId ? { ...event, comments: comment } : event
-              ),
-            }
-          : shipment
-      )
-    );
-  };
   
   React.useEffect(() => {
     if (shipments.length === 0) return;
@@ -188,7 +168,6 @@ export default function ShipmentTrackerPage() {
             <ShipmentCard 
                 key={shipment.id} 
                 shipment={shipment} 
-                onCommentChange={handleCommentChange} 
             />
             ))
         )}
