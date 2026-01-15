@@ -24,12 +24,22 @@ import ShipmentCard from "@/components/shipment-card";
 import { Accordion } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/app-provider";
+import { initiateAnonymousSignIn, useAuth, useUser } from "@/firebase";
 
 export default function ShipmentTrackerPage() {
-  const { journeyConfig, setJourneyConfig, activeJourneyMode } = useAppContext();
+  const { journeyConfig, activeJourneyMode } = useAppContext();
   const [shipments, setShipments] = React.useState<Shipment[]>([]);
   const [loading, setLoading] = React.useState(true);
   const { toast } = useToast();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+
+  React.useEffect(() => {
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [isUserLoading, user, auth]);
+
 
   const loadShipments = React.useCallback(async () => {
     setLoading(true);
@@ -157,7 +167,7 @@ export default function ShipmentTrackerPage() {
       </div>
 
       <Accordion type="single" collapsible className="w-full space-y-4">
-        {loading ? (
+        {loading || isUserLoading ? (
            Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="p-6">
               <div className="h-24 bg-muted rounded animate-pulse" />

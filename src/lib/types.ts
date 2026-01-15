@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { Timestamp } from "firebase/firestore";
 
 export type JourneyMode = 10 | 12 | 15;
 
@@ -19,7 +20,7 @@ export type TimelineEvent = {
   status: 'completed' | 'in-progress' | 'pending';
   plannedDate: string;
   actualDate?: string;
-  comments: string;
+  commentsFromSheet: string;
   Icon: LucideIcon;
 };
 
@@ -32,4 +33,11 @@ export type Shipment = {
   timeline: TimelineEvent[];
   country?: string;
   exception?: string;
+};
+
+export type Comment = {
+  id: string;
+  text: string;
+  userId: string;
+  createdAt: Timestamp | Date;
 };

@@ -3,9 +3,22 @@
 
 import { format, differenceInDays, parseISO } from "date-fns";
 import * as React from "react";
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+  addDocumentNonBlocking,
+  useUser,
+} from "@/firebase";
+import { collection, serverTimestamp } from "firebase/firestore";
 
-import type { TimelineEvent } from "@/lib/types";
+import type { TimelineEvent, Comment } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { Card, CardContent } from "./ui/card";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Send } from "lucide-react";
 
 type ShipmentTimelineNodeProps = {
   shipmentId: string;
@@ -13,10 +26,66 @@ type ShipmentTimelineNodeProps = {
   isLast: boolean;
 };
 
+const CommentEntry = ({ comment }: { comment: Comment }) => {
+  const commentDate =
+    comment.createdAt instanceof Date
+      ? comment.createdAt
+      : comment.createdAt?.toDate();
+  return (
+    <div className="flex items-start gap-3">
+      <Avatar className="h-8 w-8 border">
+        <AvatarFallback>{comment.userId.slice(0, 2)}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-foreground">
+            User {comment.userId.slice(0, 6)}...
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {commentDate ? format(commentDate, "MMM d, yyyy") : "Just now"}
+          </p>
+        </div>
+        <p className="mt-1 text-sm text-foreground">{comment.text}</p>
+      </div>
+    </div>
+  );
+};
+
 export default function ShipmentTimelineNode({
+  shipmentId,
   node,
   isLast,
 }: ShipmentTimelineNodeProps) {
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const [newComment, setNewComment] = React.useState("");
+
+  const commentsCollectionRef = useMemoFirebase(
+    () =>
+      collection(
+        firestore,
+        "shipments",
+        shipmentId,
+        "shipment_nodes",
+        node.id,
+        "comments"
+      ),
+    [firestore, shipmentId, node.id]
+  );
+
+  const { data: comments, isLoading: isLoadingComments } =
+    useCollection<Comment>(commentsCollectionRef);
+
+  const handleAddComment = () => {
+    if (!newComment.trim() || !user) return;
+    addDocumentNonBlocking(commentsCollectionleref, {
+      text: newComment,
+      userId: user.uid,
+      createdAt: serverTimestamp(),
+    });
+    setNewComment("");
+  };
+
   const delay =
     node.status === "completed" && node.actualDate
       ? differenceInDays(parseISO(node.actualDate), parseISO(node.plannedDate))
@@ -78,12 +147,66 @@ export default function ShipmentTimelineNode({
               </span>
             )}
           </div>
-          <div className="mt-3 space-y-2">
-            {node.comments && (
+          <div className="mt-4 space-y-4">
+            {node.commentsFromSheet && (
               <p className="text-sm text-foreground p-3 bg-muted rounded-md border">
-                {node.comments}
+                {node.commentsFromSheet}
               </p>
             )}
+
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <h4 className="text-sm font-semibold">Comments</h4>
+                {isLoadingComments ? (
+                  <p className="text-sm text-muted-foreground">
+                    Loading comments...
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {comments && comments.length > 0 ? (
+                      comments
+                        .sort(
+                          (a, b) =>
+                            (b.createdAt?.toDate() ?? 0) -
+                            (a.createdAt?.toDate() ?? 0)
+                        )
+                        .map((comment) => (
+                          <CommentEntry key={comment.id} comment={comment} />
+                        ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No comments yet.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {user && (
+                  <div className="flex items-start gap-3 pt-4 border-t">
+                    <Avatar className="h-8 w-8 border">
+                      <AvatarFallback>
+                        {user.uid.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-2">
+                      <Textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim()}
+                      >
+                        <Send className="mr-2" />
+                        Post Comment
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

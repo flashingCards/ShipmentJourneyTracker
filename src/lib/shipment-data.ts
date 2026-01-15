@@ -119,7 +119,7 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
                 stage: stage.name,
                 plannedDate,
                 actualDate,
-                comments: stage.remarks || "",
+                commentsFromSheet: stage.remarks || "",
                 status: getStatus(stage.actual, stage.guidance),
                 Icon: iconMap[stage.name] || iconMap["Default"],
             });

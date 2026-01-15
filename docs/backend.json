@@ -25,10 +25,6 @@
         "status": {
           "type": "string",
           "description": "The current status of the shipment (e.g., in transit, delivered)."
-        },
-        "journeyModeId": {
-          "type": "string",
-          "description": "Reference to JourneyMode. (Relationship: JourneyMode 1:N Shipment)"
         }
       },
       "required": [
@@ -36,8 +32,7 @@
         "scanCode",
         "company",
         "serviceType",
-        "status",
-        "journeyModeId"
+        "status"
       ]
     },
     "ShipmentNode": {
@@ -49,10 +44,6 @@
         "id": {
           "type": "string",
           "description": "Unique identifier for the ShipmentNode entity."
-        },
-        "shipmentId": {
-          "type": "string",
-          "description": "Reference to Shipment. (Relationship: Shipment 1:N ShipmentNode)"
         },
         "name": {
           "type": "string",
@@ -79,7 +70,6 @@
       },
       "required": [
         "id",
-        "shipmentId",
         "name",
         "expectedDate"
       ]
@@ -94,13 +84,9 @@
           "type": "string",
           "description": "Unique identifier for the Comment entity."
         },
-        "shipmentNodeId": {
-          "type": "string",
-          "description": "Reference to ShipmentNode. (Relationship: ShipmentNode 1:N Comment)"
-        },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Comment)"
+          "description": "The ID of the user who created the comment."
         },
         "text": {
           "type": "string",
@@ -114,108 +100,19 @@
       },
       "required": [
         "id",
-        "shipmentNodeId",
         "userId",
         "text",
         "createdAt"
-      ]
-    },
-    "JourneyMode": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "JourneyMode",
-      "type": "object",
-      "description": "Represents a predefined journey mode with a set number of days.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the JourneyMode entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the journey mode (e.g., 10 days, 12 days, 15 days)."
-        },
-        "duration": {
-          "type": "number",
-          "description": "The duration of the journey mode in days."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "duration"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
-        "name": {
-          "type": "string",
-          "description": "The user's full name."
-        }
-      },
-      "required": [
-        "id",
-        "email",
-        "name"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
       "anonymous"
     ]
   },
   "firestore": {
     "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles.  Accessible only to the user themselves.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/comments/{commentId}",
-        "definition": {
-          "entityName": "Comment",
-          "schema": {
-            "$ref": "#/backend/entities/Comment"
-          },
-          "description": "Stores comments created by a specific user.  Accessible only to the user themselves.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "commentId",
-              "description": "The unique identifier of the comment."
-            }
-          ]
-        }
-      },
       {
         "path": "/shipments/{shipmentId}",
         "definition": {
@@ -223,7 +120,7 @@
           "schema": {
             "$ref": "#/backend/entities/Shipment"
           },
-          "description": "Stores shipment details.  Publicly readable, but write access may be restricted to admins.",
+          "description": "Stores shipment details. Publicly readable.",
           "params": [
             {
               "name": "shipmentId",
@@ -239,7 +136,7 @@
           "schema": {
             "$ref": "#/backend/entities/ShipmentNode"
           },
-          "description": "Stores shipment node details for a specific shipment. Publicly readable, but write access may be restricted to admins.",
+          "description": "Stores shipment node details for a specific shipment. Publicly readable.",
           "params": [
             {
               "name": "shipmentId",
@@ -253,22 +150,30 @@
         }
       },
       {
-        "path": "/journey_modes/{journeyModeId}",
+        "path": "/shipments/{shipmentId}/shipment_nodes/{shipmentNodeId}/comments/{commentId}",
         "definition": {
-          "entityName": "JourneyMode",
+          "entityName": "Comment",
           "schema": {
-            "$ref": "#/backend/entities/JourneyMode"
+            "$ref": "#/backend/entities/Comment"
           },
-          "description": "Stores predefined journey modes.  Publicly readable, but write access restricted to admins.",
+          "description": "Stores comments for a specific shipment node. Readable by all, writable by owner.",
           "params": [
             {
-              "name": "journeyModeId",
-              "description": "The unique identifier of the journey mode."
+              "name": "shipmentId",
+              "description": "The unique identifier of the shipment."
+            },
+            {
+              "name": "shipmentNodeId",
+              "description": "The unique identifier of the shipment node."
+            },
+            {
+              "name": "commentId",
+              "description": "The unique identifier of the comment."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and easily debuggable, adhering to the core principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters).  It leverages denormalization to avoid hierarchical authorization dependencies and supports atomic operations.  \n\n**Authorization Independence:** Authorization is achieved primarily through path-based ownership for user-specific data and denormalized membership maps for collaborative data. For example, comments are stored under the user who created them (`/users/{userId}/comments/{commentId}`), ensuring only the user can modify or delete them. ShipmentNodes are associated to a shipment via `shipmentId`. Critically, no `get()` calls are needed in the security rules, as authorization data is either implicit in the path or explicitly denormalized.\n\n**QAPs (Rules Are Not Filters):** The structure enables secure `list` operations. For instance, listing comments is restricted to the owner of the User via `/users/{userId}/comments`, so the query itself doesn't need to filter based on user ID. Similarly, listing ShipmentNodes is straightforward because each node explicitly contains the `shipmentId`.\n\n**Data Segregation:** Data with different access requirements are stored in separate collections.  User profiles are stored under `/users/{userId}`, while JourneyModes are stored in a global collection `/journey_modes`. This segregation simplifies security rules, making them easier to understand and maintain.\n\n**Invariants:** The structure supports the integrity of ownership and timestamps. The `userId` in the `/users/{userId}/comments/{commentId}` path ensures that only the owner of the user document can create, read, update, or delete comments. Timestamps like `createdAt` in comments can be validated in security rules to ensure data integrity."
+    "reasoning": "The Firestore structure is designed for collaboration and security. Shipments and their nodes are public to allow tracking. Comments are nested under the specific shipment node they relate to, which is a natural and efficient way to query them. Anonymous authentication is enabled to allow any user to contribute, but security rules ensure that users can only create comments as themselves and cannot impersonate others or modify existing comments they don't own. This approach supports public readability while maintaining write integrity."
   }
 }
