@@ -2,10 +2,10 @@
 "use client";
 
 import { format, differenceInDays, parseISO } from "date-fns";
-import { ChevronDown, BarChart2, AlertTriangle } from "lucide-react";
+import { ChevronDown, BarChart2, AlertTriangle, Dot } from "lucide-react";
 import * as React from "react";
 
-import type { Shipment } from "@/lib/types";
+import type { Shipment, TimelineEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   AccordionContent,
@@ -50,6 +50,21 @@ export default function ShipmentCard({
     }, 0);
   }, [shipment.timeline]);
 
+  const currentStage = React.useMemo(() => {
+    const inProgressNode = shipment.timeline.find(
+      (event) => event.status === "in-progress"
+    );
+    if (inProgressNode) return inProgressNode;
+
+    const lastCompletedNode = [...shipment.timeline]
+      .reverse()
+      .find((event) => event.status === "completed");
+    if (lastCompletedNode) return lastCompletedNode;
+
+    return shipment.timeline[0];
+  }, [shipment.timeline]);
+
+
   return (
     <AccordionItem
       value={shipment.id}
@@ -57,19 +72,32 @@ export default function ShipmentCard({
     >
       <AccordionTrigger className="p-0 hover:no-underline [&[data-state=open]>div>div:last-child>div>svg]:rotate-180">
         <div className="flex w-full flex-col rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
-          <div className="flex items-start justify-between p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start justify-between p-4 sm:p-6">
             <div className="grid gap-1.5 flex-1">
-              <span className="font-semibold text-primary">{shipment.scancode}</span>
-              <h3 className="text-lg font-bold text-left">{shipment.company}</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                    <span className="font-semibold text-primary">{shipment.scancode}</span>
+                    <h3 className="text-lg font-bold text-left">{shipment.company}</h3>
+                </div>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {shipment.serviceType} {shipment.country && `(${shipment.country})`}
               </p>
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-start sm:items-end gap-2 mt-4 sm:mt-0 w-full sm:w-auto">
               <StatusBadge status={shipment.status} />
-               <Badge variant="outline" className="hidden sm:inline-flex items-center">
-                Expand <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200" />
-               </Badge>
+              <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end">
+                {currentStage && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <p>
+                        Currently: <strong>{currentStage.stage}</strong>
+                    </p>
+                  </div>
+                )}
+                 <Badge variant="outline" className="sm:ml-4 items-center">
+                  Expand <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200" />
+                 </Badge>
+              </div>
             </div>
           </div>
         </div>
