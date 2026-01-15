@@ -60,10 +60,10 @@ export default function ShipmentCard({
       value={shipment.id}
       className="border-none"
     >
-      <AccordionTrigger className="p-0 hover:no-underline [&[data-state=open]>div>div:last-child>svg]:rotate-180">
+      <AccordionTrigger className="p-0 hover:no-underline [&[data-state=open]>div>div:last-child>div>svg]:rotate-180">
         <div className="flex w-full flex-col rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md">
-          <div className="flex items-center justify-between p-4 sm:p-6">
-            <div className="grid gap-1.5">
+          <div className="flex items-start justify-between p-4 sm:p-6">
+            <div className="grid gap-1.5 flex-1">
               <span className="font-semibold text-primary">{shipment.scancode}</span>
               <h3 className="text-lg font-bold text-left">{shipment.company}</h3>
               <p className="text-sm text-muted-foreground">
@@ -72,7 +72,7 @@ export default function ShipmentCard({
             </div>
             <div className="flex flex-col items-end gap-2">
               <StatusBadge status={shipment.status} />
-               <Badge variant="outline" className="hidden sm:inline-flex">
+               <Badge variant="outline" className="hidden sm:inline-flex items-center">
                 Expand <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-200" />
                </Badge>
             </div>
