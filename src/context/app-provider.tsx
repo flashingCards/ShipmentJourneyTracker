@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { JourneyMode, JourneyConfig } from '@/lib/types';
-import { shipmentNodes } from '@/lib/types';
 
 const defaultJourneyConfig: JourneyConfig = {
   10: [
@@ -12,7 +11,7 @@ const defaultJourneyConfig: JourneyConfig = {
     { node: "Cleared at DC", days: 2 },
     { node: "Injection", days: 1 },
     { node: "Delivery", days: 1 },
-  ].filter(config => shipmentNodes.includes(config.node)),
+  ],
   12: [
     { node: "Pickup", days: 2 },
     { node: "Flight-out", days: 3 },
@@ -20,7 +19,7 @@ const defaultJourneyConfig: JourneyConfig = {
     { node: "Cleared at DC", days: 2 },
     { node: "Injection", days: 2 },
     { node: "Delivery", days: 1 },
-  ].filter(config => shipmentNodes.includes(config.node)),
+  ],
   15: [
     { node: "Pickup", days: 2 },
     { node: "Flight-out", days: 4 },
@@ -28,7 +27,7 @@ const defaultJourneyConfig: JourneyConfig = {
     { node: "Cleared at DC", days: 3 },
     { node: "Injection", days: 2 },
     { node: "Delivery", days: 1 },
-  ].filter(config => shipmentNodes.includes(config.node)),
+  ],
 };
 
 

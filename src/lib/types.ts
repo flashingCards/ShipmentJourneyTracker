@@ -3,7 +3,7 @@ import type { Timestamp } from "firebase/firestore";
 
 export type JourneyMode = 10 | 12 | 15;
 
-export const shipmentNodes = ["Origin", "Pickup", "Flight-out", "Landed", "Cleared at DC", "Injection", "Delivery"];
+export const shipmentNodes = ["Pickup", "Flight-out", "Landed", "Cleared at DC", "Injection", "Delivery"];
 
 export type JourneyNodeConfig = {
   node: string;

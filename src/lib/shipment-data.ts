@@ -14,7 +14,7 @@ import type { Shipment, TimelineEvent } from "@/lib/types";
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT55R-BoWFUg1rUYEbhwj0fhX5Nr1a25r3oo1GmKrUFvbvHqRCaqfgDKAPJsT1sV43LfCDQAlLfjdPj/pub?gid=0&single=true&output=csv';
 
 const iconMap: { [key: string]: LucideIcon } = {
-  "Origin": Landmark,
+  "Pickup": Landmark,
   "Flight-out": Plane,
   "Landed": Ship,
   "Cleared at DC": Warehouse,
@@ -92,7 +92,7 @@ export async function fetchAndParseShipments(): Promise<Shipment[]> {
     const timeline: TimelineEvent[] = [];
 
     const stages = [
-      { name: "Origin", guidance: row.Guidance_At_origin, actual: row.Actal_At_origin, remarks: row.Remarks },
+      { name: "Pickup", guidance: row.Guidance_At_origin, actual: row.Actal_At_origin, remarks: row.Remarks },
       { name: "Flight-out", guidance: row.Guidance_Flightout, actual: row.Actual_Flyout, remarks: row.Remarks_1 },
       { name: "Landed", guidance: row.Guidance_Landed, actual: row.Actual_Landed, remarks: row.Remarks_2 },
       { name: "Cleared at DC", guidance: row.Guidance_Cleared_at_DC, actual: row.Actual_Cleared_at_DC, remarks: row.Remarks_and_logs },
