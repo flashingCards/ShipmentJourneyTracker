@@ -1,8 +1,9 @@
+
 "use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, Home, Settings } from "lucide-react"
+import { AppWindow, BarChart3, Home, Settings } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -27,6 +28,11 @@ const menuItems = [
     href: "/configure",
     label: "Configuration",
     icon: Settings,
+  },
+  {
+    href: "https://flashingcards.github.io/ConsoleBenefit/",
+    label: "Console Benefit",
+    icon: AppWindow,
   },
 ]
 
