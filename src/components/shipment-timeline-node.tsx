@@ -78,7 +78,7 @@ export default function ShipmentTimelineNode({
 
   const handleAddComment = () => {
     if (!newComment.trim() || !user) return;
-    addDocumentNonBlocking(commentsCollectionleref, {
+    addDocumentNonBlocking(commentsCollectionRef, {
       text: newComment,
       userId: user.uid,
       createdAt: serverTimestamp(),
@@ -167,8 +167,8 @@ export default function ShipmentTimelineNode({
                       comments
                         .sort(
                           (a, b) =>
-                            (b.createdAt?.toDate() ?? 0) -
-                            (a.createdAt?.toDate() ?? 0)
+                            ((b.createdAt?.toDate()?.getTime() || 0) -
+                            (a.createdAt?.toDate()?.getTime() || 0))
                         )
                         .map((comment) => (
                           <CommentEntry key={comment.id} comment={comment} />
