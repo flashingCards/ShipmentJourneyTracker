@@ -35,10 +35,12 @@ export default function ShipmentTrackerPage() {
   const { user, isUserLoading } = useUser();
 
   React.useEffect(() => {
-    if (!isUserLoading && !user) {
+    // Initiate anonymous sign-in as soon as the auth service is available.
+    // This happens seamlessly in the background.
+    if (auth && !user && !isUserLoading) {
       initiateAnonymousSignIn(auth);
     }
-  }, [isUserLoading, user, auth]);
+  }, [auth, user, isUserLoading]);
 
 
   const loadShipments = React.useCallback(async () => {
@@ -167,7 +169,7 @@ export default function ShipmentTrackerPage() {
       </div>
 
       <Accordion type="single" collapsible className="w-full space-y-4">
-        {loading || isUserLoading ? (
+        {loading ? (
            Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="p-6">
               <div className="h-24 bg-muted rounded animate-pulse" />

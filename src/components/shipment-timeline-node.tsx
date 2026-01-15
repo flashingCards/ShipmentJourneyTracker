@@ -62,14 +62,14 @@ export default function ShipmentTimelineNode({
 
   const commentsCollectionRef = useMemoFirebase(
     () =>
-      collection(
+      firestore ? collection(
         firestore,
         "shipments",
         shipmentId,
         "shipment_nodes",
         node.id,
         "comments"
-      ),
+      ) : null,
     [firestore, shipmentId, node.id]
   );
 
@@ -77,7 +77,7 @@ export default function ShipmentTimelineNode({
     useCollection<Comment>(commentsCollectionRef);
 
   const handleAddComment = () => {
-    if (!newComment.trim() || !user) return;
+    if (!newComment.trim() || !user || !commentsCollectionRef) return;
     addDocumentNonBlocking(commentsCollectionRef, {
       text: newComment,
       userId: user.uid,
@@ -181,11 +181,10 @@ export default function ShipmentTimelineNode({
                       )}
                     </div>
                   )}
-                  {user && (
-                    <div className="flex items-start gap-3 pt-4 border-t">
+                  <div className="flex items-start gap-3 pt-4 border-t">
                       <Avatar className="h-8 w-8 border">
                         <AvatarFallback>
-                          {user.uid.slice(0, 2)}
+                          {user ? user.uid.slice(0, 2) : '..'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 space-y-2">
@@ -194,18 +193,18 @@ export default function ShipmentTimelineNode({
                           onChange={(e) => setNewComment(e.target.value)}
                           placeholder="Add a comment..."
                           className="text-sm"
+                          disabled={!user}
                         />
                         <Button
                           size="sm"
                           onClick={handleAddComment}
-                          disabled={!newComment.trim()}
+                          disabled={!newComment.trim() || !user}
                         >
                           <Send className="mr-2" />
                           Post Comment
                         </Button>
                       </div>
                     </div>
-                  )}
                 </CardContent>
               </Card>
             )}
