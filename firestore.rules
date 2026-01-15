@@ -1,0 +1,163 @@
+/**
+ * @file firestore.rules
+ * @description Firestore Security Rules for the application.
+ *
+ * @section Core Philosophy
+ * This ruleset enforces a dual security model. First, a strict user-ownership model
+ * governs all user-specific data, such as profiles and comments. This data is segregated
+ * into user-specific paths (`/users/{userId}`) and is only accessible by the authenticated
+ * owner of that data. Second, a public-read model is applied to shared application data like
+ * shipments and journey modes, allowing any client to read this information.
+ *
+ * @section Data Structure
+ * - /users/{userId}: Contains individual user profiles.
+ * - /users/{userId}/comments/{commentId}: A subcollection for comments created by a specific user.
+ * - /shipments/{shipmentId}: A top-level collection for shipment details, readable by all.
+ * - /shipments/{shipmentId}/shipment_nodes/{shipmentNodeId}: Subcollection for the stages of a shipment.
+ * - /journey_modes/{journeyModeId}: A top-level collection for predefined journey configurations.
+ *
+ * @section Key Security Decisions
+ * - User Data Isolation: All data under `/users/{userId}` is strictly private to that user.
+ * - Public Data: Core application data like Shipments and Journey Modes are publicly readable to
+ *   support the application's primary tracking features.
+ * - Admin-Only Writes: Writes to public collections (`shipments`, `journey_modes`) are intended for
+ *   administrators. As no admin role is currently defined in the data model, all write
+ *   operations to these collections are explicitly disabled by default (`if false;`) as a
+ *   secure starting point. This must be updated when an admin system is implemented.
+ * - No User Listing: To protect user privacy, it is not possible to list all documents in the
+ *   top-level `/users` collection.
+ *
+ * @section Denormalization for Authorization
+ * The rules rely on path-based authorization and denormalized fields to remain performant and
+ * secure. For example, a comment document created under `/users/{userId}/comments/{commentId}` must
+ * contain a `userId` field that matches the `userId` in the path. This avoids costly `get()` calls
+ * and ensures data integrity.
+ *
+ * @section Structural Segregation
+ * Data is segregated by access patterns. Private, user-owned data is nested under `/users/{userId}`,
+ * while public, read-only data resides in top-level collections like `/shipments`. This separation
+ * simplifies rule logic and improves query performance and security.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if a document exists before an update or delete operation.
+     */
+    function docExists() {
+      return resource != null;
+    }
+
+    /**
+     * Combines owner and existence checks for state-changing operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && docExists();
+    }
+
+    // -------------------------------------------------------------------------
+    // User Data Rules (/users)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user can create their own profile document.
+     * @deny (get) A user `user_abc` cannot read the profile of `user_xyz`.
+     * @principle A user can create and manage only their own profile document. Listing all users is forbidden.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages user-created comments nested under their profile.
+       * @path /users/{userId}/comments/{commentId}
+       * @allow (create) An authenticated user can create a comment under their own path.
+       * @deny (update) A user `user_abc` cannot update a comment belonging to `user_xyz`.
+       * @principle Enforces strict ownership for a user's subcollections. Ensures relational integrity via the `userId` field.
+       */
+      match /comments/{commentId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Public Data Rules (/shipments, /journey_modes)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Manages shipment documents. Publicly readable for tracking purposes.
+     * @path /shipments/{shipmentId}
+     * @allow (get) Any user, authenticated or not, can read shipment details.
+     * @deny (create) No user can create a new shipment document directly.
+     * @principle Data is public for reads, but writes are disabled pending implementation of an admin role.
+     */
+    match /shipments/{shipmentId} {
+      allow get: if true;
+      allow list: if true;
+      // TODO: Implement admin-only write access.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+
+      /**
+       * @description Manages shipment node documents. Publicly readable for tracking.
+       * @path /shipments/{shipmentId}/shipment_nodes/{shipmentNodeId}
+       * @allow (get) Any user can read the details of a shipment's journey stages.
+       * @deny (update) No user can modify a shipment node document directly.
+       * @principle Data is public for reads, but writes are disabled pending implementation of an admin role.
+       */
+      match /shipment_nodes/{shipmentNodeId} {
+        allow get: if true;
+        allow list: if true;
+        // TODO: Implement admin-only write access. For creation, validate `request.resource.data.shipmentId == shipmentId`.
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    /**
+     * @description Manages predefined journey modes. Publicly readable configuration data.
+     * @path /journey_modes/{journeyModeId}
+     * @allow (list) Any user, authenticated or not, can list all available journey modes.
+     * @deny (create) No user can create a new journey mode.
+     * @principle Configuration data is public for reads, but writes are disabled pending implementation of an admin role.
+     */
+    match /journey_modes/{journeyModeId} {
+      allow get: if true;
+      allow list: if true;
+      // TODO: Implement admin-only write access.
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
