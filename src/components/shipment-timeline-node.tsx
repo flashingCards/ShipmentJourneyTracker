@@ -154,59 +154,61 @@ export default function ShipmentTimelineNode({
               </p>
             )}
 
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <h4 className="text-sm font-semibold">Comments</h4>
-                {isLoadingComments ? (
-                  <p className="text-sm text-muted-foreground">
-                    Loading comments...
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {comments && comments.length > 0 ? (
-                      comments
-                        .sort(
-                          (a, b) =>
-                            ((b.createdAt?.toDate()?.getTime() || 0) -
-                            (a.createdAt?.toDate()?.getTime() || 0))
-                        )
-                        .map((comment) => (
-                          <CommentEntry key={comment.id} comment={comment} />
-                        ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No comments yet.
-                      </p>
-                    )}
-                  </div>
-                )}
-                {user && (
-                  <div className="flex items-start gap-3 pt-4 border-t">
-                    <Avatar className="h-8 w-8 border">
-                      <AvatarFallback>
-                        {user.uid.slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-2">
-                      <Textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="text-sm"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={handleAddComment}
-                        disabled={!newComment.trim()}
-                      >
-                        <Send className="mr-2" />
-                        Post Comment
-                      </Button>
+            {delay > 0 && (
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <h4 className="text-sm font-semibold">Comments</h4>
+                  {isLoadingComments ? (
+                    <p className="text-sm text-muted-foreground">
+                      Loading comments...
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {comments && comments.length > 0 ? (
+                        comments
+                          .sort(
+                            (a, b) =>
+                              ((b.createdAt?.toDate()?.getTime() || 0) -
+                              (a.createdAt?.toDate()?.getTime() || 0))
+                          )
+                          .map((comment) => (
+                            <CommentEntry key={comment.id} comment={comment} />
+                          ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No comments yet.
+                        </p>
+                      )}
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                  {user && (
+                    <div className="flex items-start gap-3 pt-4 border-t">
+                      <Avatar className="h-8 w-8 border">
+                        <AvatarFallback>
+                          {user.uid.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-2">
+                        <Textarea
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Add a comment..."
+                          className="text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={handleAddComment}
+                          disabled={!newComment.trim()}
+                        >
+                          <Send className="mr-2" />
+                          Post Comment
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
